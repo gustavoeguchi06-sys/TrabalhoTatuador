@@ -26,7 +26,6 @@ SECRET_KEY = 'django-insecure-m)i5qr7ccoq9_3-4@x$#*-e!tywj!!&mmt*&svtnzi)r5gbkt(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
-import os
 
 # Optional: use PyMySQL as MySQLdb if available
 try:
@@ -39,6 +38,12 @@ ALLOWED_HOSTS = [
     "trabalhotatuador-production.up.railway.app",
     "localhost",
     "127.0.0.1",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://trabalhotatuador-production.up.railway.app",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
 ]
 
 INSTALLED_APPS = [
