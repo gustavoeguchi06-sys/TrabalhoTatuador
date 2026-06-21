@@ -26,12 +26,12 @@ SECRET_KEY = 'django-insecure-m)i5qr7ccoq9_3-4@x$#*-e!tywj!!&mmt*&svtnzi)r5gbkt(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = [
-    "trabalhotatuador-production.up.railway.app",
-    "localhost",
-    "127.0.0.1",
-]
+import os
 
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS",
+    "localhost 127.0.0.1"
+).split()
 
 # Application definition
 
