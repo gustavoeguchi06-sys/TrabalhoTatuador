@@ -85,14 +85,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 if os.environ.get('MYSQLDATABASE'):
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.environ.get('MYSQLDATABASE'),
-            'USER': os.environ.get('MYSQLUSER'),
-            'PASSWORD': os.environ.get('MYSQLPASSWORD'),
-            'HOST': os.environ.get('MYSQLHOST'),
-            'PORT': os.environ.get('MYSQLPORT'),
-        }
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('MYSQLDATABASE'),
+        'USER': os.getenv('MYSQLUSER'),
+        'PASSWORD': os.getenv('MYSQLPASSWORD'),
+        'HOST': os.getenv('MYSQLHOST'),
+        'PORT': os.getenv('MYSQLPORT'),
+    }
     }
 else:
     DATABASES = {
