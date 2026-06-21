@@ -28,12 +28,10 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
 import os
 
-ALLOWED_HOSTS = os.environ.get(
+ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
-    "localhost 127.0.0.1"
-).split()
-
-# Application definition
+    "trabalhotatuador-production.up.railway.app"
+).split(",")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
