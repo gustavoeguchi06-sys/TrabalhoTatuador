@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro - Tatuador</title>
+    <link rel="stylesheet" href="{% static 'css/visual.css' %}">
+</head>
+<body>
+    <header class="top">
+        <h1>Controle Financeiro - Tatuador</h1>
+    </header>
+
+    <main class="container">
+        <section class="panel form-panel">
+            <h2>Registrar Serviço</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <label>Cliente<input type="text" name="client" required></label>
+                    <label>Data<input type="date" name="date" required></label>
+                </div>
+                <label>Descrição do serviço<textarea name="description" rows="2"></textarea></label>
+                <div class="row">
+                    <label>Preço cobrado<input type="number" name="price" step="0.01" required></label>
+                    <label>Custo<input type="number" name="cost" step="0.01" value="0"></label>
+                    <label>Pagamento
+                        <select name="payment">
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartão">Cartão</option>
+                            <option value="Pix">Pix</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </label>
+                </div>
+                <label>Observações<input type="text" name="notes"></label>
+                <div class="actions">
+                    <button type="submit">Adicionar</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel summary-panel">
+            <h2>Resumo</h2>
+            <div class="summary-grid">
+                <div class="card">Receita<br><strong>{{ total_revenue|floatformat:2 }}</strong></div>
+                <div class="card">Despesas<br><strong>{{ total_cost|floatformat:2 }}</strong></div>
+                <div class="card">Lucro<br><strong>{{ total_profit|floatformat:2 }}</strong></div>
+            </div>
+        </section>
+
+        <section class="panel list-panel">
+            <h2>Transações</h2>
+            <form method="get" class="filters">
+                <label>De <input type="date" name="from" value="{{ filter_from }}"></label>
+                <label>Até <input type="date" name="to" value="{{ filter_to }}"></label>
+                <label>Cliente <input type="text" name="client" value="{{ filter_client }}"></label>
+                <button type="submit">Aplicar</button>
+                <a href="." class="button">Resetar</a>
+            </form>
+
+            <table id="txTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Serviço</th>
+                        <th>Preço</th>
+                        <th>Custo</th>
+                        <th>Pagamento</th>
+                        <th>Obs</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for tx in transactions %}
+                    <tr>
+                        <td>{{ tx.date }}</td>
+                        <td>{{ tx.client }}</td>
+                        <td>{{ tx.description }}</td>
+                        <td>R$ {{ tx.price }}</td>
+                        <td>R$ {{ tx.cost }}</td>
+                        <td>{{ tx.payment }}</td>
+                        <td>{{ tx.notes }}</td>
+                        <td>
+                            <form method="post" action="{% url 'finance:delete' tx.pk %}" style="display:inline">
+                                {% csrf_token %}
+                                <button type="submit">x</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8">Nenhuma transação</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer class="foot"></footer>
+</body>
+</html>
