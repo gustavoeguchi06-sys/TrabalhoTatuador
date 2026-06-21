@@ -24,8 +24,12 @@ th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
 thead th{background:#fafafa}
 .foot{text-align:center;padding:12px;color:var(--muted);font-size:0.9rem}
 
+.table-wrap{overflow:auto}
+
 @media(max-width:900px){
   .container{grid-template-columns:1fr;padding:12px}
   .summary-grid{flex-direction:row}
   .row{flex-direction:column}
+  button{padding:12px 14px}
+  .form-panel input, .form-panel textarea, .form-panel select{font-size:1rem}
 }

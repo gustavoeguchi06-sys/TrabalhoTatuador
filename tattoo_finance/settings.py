@@ -8,11 +8,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-placeholder-key')
 # DEBUG should be False in production. Control via env var.
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
-# ALLOWED_HOSTS can be configured via env, defaults to localhost when DEBUG is False
-if DEBUG:
-    ALLOWED_HOSTS = ['*']
-else:
-    ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')
+# Explicit ALLOWED_HOSTS per request
+ALLOWED_HOSTS = [
+    "trabalhotatuador-production.up.railway.app",
+    "localhost",
+    "127.0.0.1",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

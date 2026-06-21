@@ -13,12 +13,23 @@ def list_create(request):
         cost = request.POST.get('cost') or '0'
         payment = request.POST.get('payment','')
         notes = request.POST.get('notes','')
+        # aceitar formato brasileiro: milhares com ponto e decimais com vírgula (ex: 5.000,00)
+        def parse_brl(value_str):
+            v = (value_str or '').strip()
+            if v == '':
+                return Decimal('0')
+            # remover separador de milhares e trocar vírgula decimal para ponto
+            clean = v.replace('.', '').replace(',', '.')
+            try:
+                return Decimal(clean)
+            except Exception:
+                return Decimal('0')
         Transaction.objects.create(
             client=client,
             date=date,
             description=description,
-            price=Decimal(price),
-            cost=Decimal(cost),
+            price=parse_brl(price),
+            cost=parse_brl(cost),
             payment=payment,
             notes=notes,
         )

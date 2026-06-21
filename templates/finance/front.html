@@ -1,4 +1,5 @@
 {% load static %}
+{% load finance_extras %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -23,8 +24,8 @@
                 </div>
                 <label>Descrição do serviço<textarea name="description" rows="2"></textarea></label>
                 <div class="row">
-                    <label>Preço cobrado<input type="number" name="price" step="0.01" required></label>
-                    <label>Custo<input type="number" name="cost" step="0.01" value="0"></label>
+                    <label>Preço cobrado<input type="text" name="price" placeholder="5.000,00" required></label>
+                    <label>Custo<input type="text" name="cost" placeholder="0,00" value="0,00"></label>
                     <label>Pagamento
                         <select name="payment">
                             <option value="Dinheiro">Dinheiro</option>
@@ -43,10 +44,10 @@
 
         <section class="panel summary-panel">
             <h2>Resumo</h2>
-            <div class="summary-grid">
-                <div class="card">Receita<br><strong>{{ total_revenue|floatformat:2 }}</strong></div>
-                <div class="card">Despesas<br><strong>{{ total_cost|floatformat:2 }}</strong></div>
-                <div class="card">Lucro<br><strong>{{ total_profit|floatformat:2 }}</strong></div>
+                <div class="summary-grid">
+                <div class="card">Receita<br><strong>R$ {{ total_revenue|brl }}</strong></div>
+                <div class="card">Despesas<br><strong>R$ {{ total_cost|brl }}</strong></div>
+                <div class="card">Lucro<br><strong>R$ {{ total_profit|brl }}</strong></div>
             </div>
         </section>
 
@@ -60,6 +61,7 @@
                 <a href="." class="button">Resetar</a>
             </form>
 
+            <div class="table-wrap">
             <table id="txTable">
                 <thead>
                     <tr>
@@ -79,8 +81,8 @@
                         <td>{{ tx.date }}</td>
                         <td>{{ tx.client }}</td>
                         <td>{{ tx.description }}</td>
-                        <td>R$ {{ tx.price }}</td>
-                        <td>R$ {{ tx.cost }}</td>
+                        <td>R$ {{ tx.price|brl }}</td>
+                        <td>R$ {{ tx.cost|brl }}</td>
                         <td>{{ tx.payment }}</td>
                         <td>{{ tx.notes }}</td>
                         <td>
@@ -95,6 +97,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
         </section>
     </main>
 

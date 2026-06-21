@@ -11,4 +11,11 @@ db.sqlite3
 dist/
 build/
 *.egg-info/
-/.pytest_cache/
+.pytest_cache/
+media/
+.mypy_cache/
+htmlcov/
+coverage.xml
+.Python
+pip-wheel-metadata/
+.DS_Store
