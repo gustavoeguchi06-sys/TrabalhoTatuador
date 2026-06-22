@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+print("🚨 SETTINGS ATIVO:", __name__)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,12 +42,15 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://trabalhotatuador-production.up.railway.app",
-    "https://*.up.railway.app",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+print("🔥 SETTINGS CARREGADO")
+print("CSRF:", CSRF_TRUSTED_ORIGINS)
+print("ALLOWED:", ALLOWED_HOSTS)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
