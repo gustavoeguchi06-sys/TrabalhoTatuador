@@ -24,12 +24,13 @@
                 </div>
                 <label>Descrição do serviço<textarea name="description" rows="2"></textarea></label>
                 <div class="row">
-                    <label>Preço cobrado<input type="text" name="price" placeholder="5.000,00" required></label>
-                    <label>Custo<input type="text" name="cost" placeholder="0,00" value="0,00"></label>
+                    <label>Preço cobrado<input type="number" name="price" step="0.01" min="0" placeholder="0.00" required></label>
+                    <label>Custo<input type="number" name="cost" step="0.01" min="0" placeholder="" ></label>
                     <label>Pagamento
                         <select name="payment">
                             <option value="Dinheiro">Dinheiro</option>
-                            <option value="Cartão">Cartão</option>
+                            <option value="Cartão Débito">Cartão de débito</option>
+                            <option value="Cartão Crédito">Cartão de crédito</option>
                             <option value="Pix">Pix</option>
                             <option value="Outro">Outro</option>
                         </select>
@@ -56,7 +57,7 @@
             <form method="get" class="filters">
                 <label>De <input type="date" name="from" value="{{ filter_from }}"></label>
                 <label>Até <input type="date" name="to" value="{{ filter_to }}"></label>
-                <label>Cliente <input type="text" name="client" value="{{ filter_client }}"></label>
+                <label>Cliente <input type="text" name="client" value="{{ filter_client }}" pattern="[A-Za-zÀ-ÿ\s]+"></label>
                 <button type="submit">Aplicar</button>
                 <a href="." class="button">Resetar</a>
             </form>
@@ -102,5 +103,44 @@
     </main>
 
     <footer class="foot"></footer>
+    <script>
+    // Prevent digits in client name fields
+    document.querySelectorAll('input[name="client"]').forEach(function(inp){
+        inp.addEventListener('input', function(){
+            this.value = this.value.replace(/\d+/g, '');
+        });
+    });
+
+    // Form validation: cost must be less than price; ensure numeric values
+    document.querySelectorAll('form').forEach(function(form){
+        form.addEventListener('submit', function(e){
+            // Only validate the main add form (has input[name="price"] and name="cost")
+            var priceEl = this.querySelector('input[name="price"]');
+            var costEl = this.querySelector('input[name="cost"]');
+            if(priceEl && costEl){
+                var price = parseFloat(priceEl.value);
+                var cost = parseFloat(costEl.value || 0);
+                if(!isFinite(price)){
+                    e.preventDefault();
+                    alert('Preço inválido. Digite um número válido.');
+                    priceEl.focus();
+                    return false;
+                }
+                if(!isFinite(cost)){
+                    e.preventDefault();
+                    alert('Custo inválido. Digite um número válido.');
+                    costEl.focus();
+                    return false;
+                }
+                if(cost >= price){
+                    e.preventDefault();
+                    alert('O custo deve ser menor que o preço cobrado.');
+                    costEl.focus();
+                    return false;
+                }
+            }
+        });
+    });
+    </script>
 </body>
 </html>
