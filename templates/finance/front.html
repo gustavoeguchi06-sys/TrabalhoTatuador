@@ -83,14 +83,14 @@
                 <tbody>
                 {% for tx in transactions %}
                     <tr>
-                        <td>{{ tx.date|date:"d/m/Y" }}</td>
-                        <td>{{ tx.client }}</td>
-                        <td>{{ tx.description }}</td>
-                        <td>R$ {{ tx.price|brl }}</td>
-                        <td>R$ {{ tx.cost|brl }}</td>
-                        <td>{{ tx.payment }}</td>
-                        <td>{{ tx.notes }}</td>
-                        <td>
+                        <td data-label="Data">{{ tx.date|date:"d/m/Y" }}</td>
+                        <td data-label="Cliente">{{ tx.client }}</td>
+                        <td data-label="Serviço">{{ tx.description }}</td>
+                        <td data-label="Preço">R$ {{ tx.price|brl }}</td>
+                        <td data-label="Custo">R$ {{ tx.cost|brl }}</td>
+                        <td data-label="Pagamento">{{ tx.payment }}</td>
+                        <td data-label="Obs">{{ tx.notes }}</td>
+                        <td data-label="Ações">
                             <form method="post" action="{% url 'finance:delete' tx.pk %}" style="display:inline" class="delete-form">
                                 {% csrf_token %}
                                 <button type="button" class="delete-btn">x</button>
