@@ -5,12 +5,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0b10">
-    <meta name="build" content="2">
+    <meta name="build" content="3">
     <title>{% block title %}Estúdio{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/visual.css' %}">
+    {# ?v= força o navegador a baixar a versão nova quando o CSS/JS mudar #}
+    <link rel="stylesheet" href="{% static 'css/visual.css' %}?v=3">
 </head>
 <body>
     <header class="top">
@@ -43,6 +44,6 @@
     <script>
         window.CSRF_TOKEN = '{{ csrf_token }}';
     </script>
-    <script src="{% static 'js/app.js' %}"></script>
+    <script src="{% static 'js/app.js' %}?v=3"></script>
 </body>
 </html>
