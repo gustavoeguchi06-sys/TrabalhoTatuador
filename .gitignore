@@ -5,6 +5,7 @@ __pycache__/
 *.pyd
 *.sqlite3
 db.sqlite3
+vapid_private_key.pem
 .env
 .vscode/
 .idea/
@@ -19,3 +20,4 @@ coverage.xml
 .Python
 pip-wheel-metadata/
 .DS_Store
+staticfiles/

@@ -3,8 +3,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from finance.views import service_worker
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('sw.js', service_worker, name='service_worker'),
     path('', include('finance.urls')),
 ]
 

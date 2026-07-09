@@ -1,291 +1,128 @@
-{% load static %}
+{% extends 'finance/base.html' %}
 {% load finance_extras %}
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle Financeiro - Tatuador</title>
-    <link rel="stylesheet" href="{% static 'css/visual.css' %}">
-</head>
-<body>
-    <header class="top">
-        <center><h1>Controle Financeiro - RABISCO</h1></center>
-    </header>
 
-    <main class="container">
+{% block title %}Financeiro — Estúdio{% endblock %}
+
+{% block content %}
+    <section class="stats">
+        <div class="stat">
+            <span class="stat-label">Receita</span>
+            <strong class="stat-value">R$ {{ total_revenue|brl }}</strong>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Despesas</span>
+            <strong class="stat-value negative">R$ {{ total_cost|brl }}</strong>
+        </div>
+        <div class="stat stat-featured">
+            <span class="stat-label">Lucro</span>
+            <strong class="stat-value {% if total_profit >= 0 %}positive{% else %}negative{% endif %}">R$ {{ total_profit|brl }}</strong>
+        </div>
+    </section>
+
+    {% if todays_appointments %}
+    <section class="today-strip">
+        <h2 class="section-title">Hoje na agenda</h2>
+        <div class="today-chips">
+            {% for appt in todays_appointments %}
+            <a class="chip" href="{% url 'finance:agenda' %}">
+                <span class="chip-time">{{ appt.time|time:"H:i" }}</span>
+                <span class="chip-client">{{ appt.client }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="layout">
         <section class="panel form-panel">
-            <h2>Registrar Serviço</h2>
-            {% if error %}
-                <div class="error">{{ error }}</div>
-            {% endif %}
+            <h2 class="section-title">Registrar serviço</h2>
             <form method="post">
                 {% csrf_token %}
-                <div class="row">
-                    <label>Cliente<input type="text" name="client" required value="{{ form_values.client|default:'' }}"></label>
-                    <label>Data<input type="date" name="date" required value="{{ form_values.date|default:'' }}"></label>
-                </div>
-                <label>Descrição do serviço<textarea name="description" rows="2"></textarea></label>
-                <div class="row">
-                    <label>Preço cobrado<input type="text" name="price" class="currency" placeholder="R$ 0,00" required value="{{ form_values.price|default:'' }}"></label>
-                    <label>Custo<input type="text" name="cost" class="currency" placeholder="R$ 0,00" value="{{ form_values.cost|default:'' }}"></label>
-                    <label>Pagamento
-                        <select name="payment">
-                            <option value="Dinheiro" {% if form_values.payment == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
-                            <option value="Cartão Débito" {% if form_values.payment == 'Cartão Débito' %}selected{% endif %}>Cartão de débito</option>
-                            <option value="Cartão Crédito" {% if form_values.payment == 'Cartão Crédito' %}selected{% endif %}>Cartão de crédito</option>
-                            <option value="Pix" {% if form_values.payment == 'Pix' %}selected{% endif %}>Pix</option>
-                            <option value="Outro" {% if form_values.payment == 'Outro' %}selected{% endif %}>Outro</option>
-                        </select>
+                <div class="field-row">
+                    <label>Cliente
+                        <input type="text" name="client" value="{{ prefill.client }}" required>
+                    </label>
+                    <label>Data
+                        <input type="date" name="date" required>
                     </label>
                 </div>
-                <label>Observações<input type="text" name="notes" value="{{ form_values.notes|default:'' }}"></label>
-                <div class="actions">
-                    <button type="submit">Adicionar</button>
+                <label>Descrição do serviço
+                    <textarea name="description" rows="2">{{ prefill.description }}</textarea>
+                </label>
+                <div class="field-row">
+                    <label>Preço cobrado
+                        <input type="text" name="price" inputmode="decimal" placeholder="5.000,00" value="{{ prefill.price }}" required>
+                    </label>
+                    <label>Custo
+                        <input type="text" name="cost" inputmode="decimal" placeholder="0,00" value="0,00">
+                    </label>
                 </div>
+                <div class="field-row">
+                    <label>Pagamento
+                        <select name="payment">
+                            <option value="Pix">Pix</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartão">Cartão</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </label>
+                    <label>Observações
+                        <input type="text" name="notes">
+                    </label>
+                </div>
+                <button type="submit" class="btn-primary">Adicionar serviço</button>
             </form>
-        </section>
-
-        <section class="panel summary-panel">
-            <h2>Resumo</h2>
-                <div class="summary-grid">
-                <div class="card">Receita<br><strong>R$ {{ total_revenue|brl }}</strong></div>
-                <div class="card">Despesas<br><strong>R$ {{ total_cost|brl }}</strong></div>
-                <div class="card">Lucro<br><strong>R$ {{ total_profit|brl }}</strong></div>
-            </div>
         </section>
 
         <section class="panel list-panel">
-            <h2>Transações</h2>
+            <h2 class="section-title">Serviços registrados</h2>
             <form method="get" class="filters">
                 <label>De <input type="date" name="from" value="{{ filter_from }}"></label>
                 <label>Até <input type="date" name="to" value="{{ filter_to }}"></label>
-                <label>Cliente <input type="text" name="client" value="{{ filter_client }}" pattern="[A-Za-zÀ-ÿ\s]+"></label>
-                <button type="submit">Aplicar</button>
-                <button type="button" class="button" id="reset-button">Resetar</button>
+                <label>Cliente <input type="text" name="client" value="{{ filter_client }}" placeholder="Buscar por nome"></label>
+                <div class="filters-actions">
+                    <button type="submit" class="btn-ghost">Filtrar</button>
+                    <a href="{% url 'finance:list' %}" class="btn-ghost">Limpar</a>
+                </div>
             </form>
-            <form id="reset-form" method="post" action="{% url 'finance:reset' %}" style="display:none">{% csrf_token %}</form>
 
             <div class="table-wrap">
-            <table id="txTable">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Cliente</th>
-                        <th>Serviço</th>
-                        <th>Preço</th>
-                        <th>Custo</th>
-                        <th>Pagamento</th>
-                        <th>Obs</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for tx in transactions %}
-                    <tr>
-                        <td data-label="Data">{{ tx.date|date:"d/m/Y" }}</td>
-                        <td data-label="Cliente">{{ tx.client }}</td>
-                        <td data-label="Serviço">{{ tx.description }}</td>
-                        <td data-label="Preço">R$ {{ tx.price|brl }}</td>
-                        <td data-label="Custo">R$ {{ tx.cost|brl }}</td>
-                        <td data-label="Pagamento">{{ tx.payment }}</td>
-                        <td data-label="Obs">{{ tx.notes }}</td>
-                        <td data-label="Ações">
-                            <form method="post" action="{% url 'finance:delete' tx.pk %}" style="display:inline" class="delete-form">
-                                {% csrf_token %}
-                                <button type="button" class="delete-btn">x</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr><td colspan="8">Nenhuma transação</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Serviço</th>
+                            <th class="num">Preço</th>
+                            <th class="num">Custo</th>
+                            <th>Pagamento</th>
+                            <th>Obs</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for tx in transactions %}
+                        <tr>
+                            <td class="cell-date">{{ tx.date|date:"d/m/y" }}</td>
+                            <td class="cell-client">{{ tx.client }}</td>
+                            <td>{{ tx.description }}</td>
+                            <td class="num cell-price">R$ {{ tx.price|brl }}</td>
+                            <td class="num">R$ {{ tx.cost|brl }}</td>
+                            <td><span class="tag">{{ tx.payment }}</span></td>
+                            <td class="cell-notes">{{ tx.notes }}</td>
+                            <td>
+                                <form method="post" action="{% url 'finance:delete' tx.pk %}" onsubmit="return confirm('Excluir este registro?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-icon" title="Excluir">&times;</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8" class="empty">Nenhum serviço registrado ainda. Use o formulário ao lado para começar.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </section>
-    </main>
-
-    <footer class="foot"></footer>
-    <!-- Custom modal -->
-    <div id="app-modal" class="modal" aria-hidden="true">
-        <div class="modal-backdrop"></div>
-        <div class="modal-card" role="dialog" aria-modal="true">
-            <div class="modal-body">
-                <p id="modal-message"></p>
-            </div>
-            <div class="modal-actions">
-                <button id="modal-cancel" class="btn btn-secondary">Cancelar</button>
-                <button id="modal-confirm" class="btn btn-primary">Confirmar</button>
-            </div>
-        </div>
     </div>
-
-    <script>
-    const modalEl = document.getElementById('app-modal');
-    const modalMessage = document.getElementById('modal-message');
-    const modalConfirm = document.getElementById('modal-confirm');
-    const modalCancel = document.getElementById('modal-cancel');
-    function showModal(message, options){
-        // options: {confirmText, cancelText, onConfirm, showCancel (bool)}
-        modalMessage.textContent = message;
-        modalConfirm.textContent = (options && options.confirmText) || 'Confirmar';
-        modalCancel.textContent = (options && options.cancelText) || 'Cancelar';
-        if(options && options.showCancel===false){
-            modalCancel.style.display = 'none';
-        } else {
-            modalCancel.style.display = '';
-        }
-        modalEl.setAttribute('aria-hidden','false');
-        modalEl.classList.add('open');
-        // attach handlers
-        function cleanup(){
-            modalEl.classList.remove('open');
-            modalEl.setAttribute('aria-hidden','true');
-            modalConfirm.removeEventListener('click', onConfirmClick);
-            modalCancel.removeEventListener('click', onCancelClick);
-        }
-        function onConfirmClick(){
-            cleanup();
-            if(options && typeof options.onConfirm === 'function') options.onConfirm();
-        }
-        function onCancelClick(){
-            cleanup();
-            if(options && typeof options.onCancel === 'function') options.onCancel();
-        }
-        modalConfirm.addEventListener('click', onConfirmClick);
-        modalCancel.addEventListener('click', onCancelClick);
-    }
-    // Prevent digits in client name fields
-    document.querySelectorAll('input[name="client"]').forEach(function(inp){
-        inp.addEventListener('input', function(){
-            this.value = this.value.replace(/\d+/g, '');
-        });
-    });
-
-    // Hook delete buttons to use custom modal
-    document.querySelectorAll('.delete-btn').forEach(function(btn){
-        btn.addEventListener('click', function(){
-            var form = this.closest('form');
-            showModal('Tem certeza que deseja excluir?', {
-                confirmText: 'Excluir',
-                cancelText: 'Cancelar',
-                onConfirm: function(){ form.submit(); }
-            });
-        });
-    });
-
-    // Reset button uses modal and submits hidden reset form
-    var resetBtn = document.getElementById('reset-button');
-    if(resetBtn){
-        resetBtn.addEventListener('click', function(){
-            showModal('Deseja resetar a visualização para o mês atual?', {
-                confirmText: 'Resetar',
-                cancelText: 'Cancelar',
-                onConfirm: function(){ document.getElementById('reset-form').submit(); }
-            });
-        });
-    }
-
-    // Currency formatting and parsing helpers
-    function toNumberFromInput(str){
-        if(!str) return NaN;
-        var s = String(str).replace(/[^0-9,\.\-]/g,'').trim();
-        if(s === '') return NaN;
-        if(s.indexOf(',')>-1 && s.indexOf('.')>-1){
-            s = s.replace(/\./g,'').replace(/,/g,'.');
-        } else {
-            s = s.replace(/,/g,'.');
-        }
-        var n = parseFloat(s);
-        return isNaN(n)?NaN:n;
-    }
-
-    var currencyFormatter = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'});
-
-    function formatBRL(value){
-        if(value == null || isNaN(value)) return '';
-        return currencyFormatter.format(Number(value));
-    }
-
-    function normalizeForSubmit(form){
-        // convert currency fields to plain BRL number string without 'R$' (e.g., 1.234,56)
-        form.querySelectorAll('input.currency').forEach(function(inp){
-            var text = inp.value || '';
-            // remove currency symbol and spaces
-            var cleaned = String(text).replace(/\s|R\$|\$/g,'').trim();
-            inp.value = cleaned;
-        });
-    }
-
-    // Initialize currency fields with live formatting (typing formats R$ with thousands and comma)
-    document.querySelectorAll('input.currency').forEach(function(inp){
-        // format existing numeric value if present
-        if(inp.value){
-            var n = toNumberFromInput(inp.value);
-            if(!isNaN(n)) inp.value = formatBRL(n);
-        }
-        inp.addEventListener('input', function(e){
-            // keep only digits and build cents-based value
-            var digits = this.value.replace(/\D/g,'');
-            if(digits === ''){ this.value = ''; return; }
-            var n = parseInt(digits,10);
-            var value = n / 100;
-            this.value = formatBRL(value);
-        });
-        inp.addEventListener('focus', function(){
-            // show plain number with dot decimal for easier editing
-            var n = toNumberFromInput(this.value);
-            if(!isNaN(n)) this.value = n.toFixed(2);
-            else this.value = '';
-            try{ this.setSelectionRange(this.value.length, this.value.length); }catch(err){}
-        });
-        inp.addEventListener('blur', function(){
-            var n = toNumberFromInput(this.value);
-            if(!isNaN(n)) this.value = formatBRL(n);
-            else this.value = '';
-        });
-    });
-
-    // Form validation: cost must be less than price; ensure numeric values
-    document.querySelectorAll('form').forEach(function(form){
-        form.addEventListener('submit', function(e){
-            // Before validation, normalize currency fields for parsing
-            // but keep visual formatting for user by saving original and restoring after
-            var priceEl = this.querySelector('input[name="price"]');
-            var costEl = this.querySelector('input[name="cost"]');
-            if(priceEl && costEl){
-                // parse numeric values from possibly formatted inputs
-                var price = toNumberFromInput(priceEl.value);
-                var cost = toNumberFromInput(costEl.value || '0');
-                if(!isFinite(price)){
-                    e.preventDefault();
-                    showModal('Preço inválido. Digite um número válido.', {showCancel:false, confirmText:'Ok', onConfirm:function(){ priceEl.focus(); }});
-                    return false;
-                }
-                if(!isFinite(cost)){
-                    e.preventDefault();
-                    showModal('Custo inválido. Digite um número válido.', {showCancel:false, confirmText:'Ok', onConfirm:function(){ costEl.focus(); }});
-                    return false;
-                }
-                if(cost >= price){
-                    e.preventDefault();
-                    showModal('O custo deve ser menor que o preço cobrado.', {showCancel:false, confirmText:'Ok', onConfirm:function(){ costEl.focus(); }});
-                    return false;
-                }
-                // normalize fields so backend receives parsable BRL-like string (e.g., 1.234,56)
-                normalizeForSubmit(this);
-            }
-        });
-    });
-    {% if auto_reset_warning %}
-    // auto-reset prompt for first day of month
-    showModal('Hoje é o primeiro dia do mês. Deseja resetar a visualização para o mês atual?', {
-        confirmText: 'Resetar',
-        cancelText: 'Depois',
-        onConfirm: function(){ document.getElementById('reset-form').submit(); }
-    });
-    {% endif %}
-    </script>
-</body>
-</html>
+{% endblock %}
