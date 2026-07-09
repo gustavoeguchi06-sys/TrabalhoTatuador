@@ -1,8 +1,13 @@
 """Envio de notificações Web Push com chaves VAPID geradas automaticamente.
 
-As chaves ficam em BASE_DIR/vapid_private_key.pem (criadas no primeiro uso).
+Ordem de busca da chave privada:
+1. Variável de ambiente VAPID_PRIVATE_KEY (conteúdo do PEM) — necessária em
+   plataformas com disco efêmero, como o Railway, para as inscrições
+   sobreviverem aos deploys.
+2. Arquivo BASE_DIR/vapid_private_key.pem (criado no primeiro uso).
 """
 import json
+import os
 
 from cryptography.hazmat.primitives import serialization
 from django.conf import settings
@@ -18,7 +23,15 @@ _vapid = None
 def get_vapid():
     global _vapid
     if _vapid is None:
-        if not VAPID_KEY_PATH.exists():
+        env_pem = os.environ.get('VAPID_PRIVATE_KEY', '').strip()
+        if env_pem:
+            # aceita PEM com quebras reais ou com "\n" literal
+            pem = env_pem.replace('\\n', '\n')
+            if not pem.endswith('\n'):
+                pem += '\n'
+            if not VAPID_KEY_PATH.exists() or VAPID_KEY_PATH.read_text() != pem:
+                VAPID_KEY_PATH.write_text(pem)
+        elif not VAPID_KEY_PATH.exists():
             v = Vapid()
             v.generate_keys()
             v.save_key(str(VAPID_KEY_PATH))

@@ -6,9 +6,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # In production, set environment variable SECRET_KEY to a secure value.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-placeholder-key')
-# DEBUG should be False in production. Control via env var.
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
-# Explicit ALLOWED_HOSTS per request
+
+# Detecta se está rodando no Railway (a plataforma define essa variável).
+ON_RAILWAY = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+
+# DEBUG: desligado por padrão no Railway; ligado localmente.
+# Pode ser forçado com a variável DJANGO_DEBUG.
+_default_debug = 'False' if ON_RAILWAY else 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', _default_debug).lower() in ('1', 'true', 'yes')
+
 ALLOWED_HOSTS = [
     "trabalhotatuador-production.up.railway.app",
     "localhost",
@@ -20,6 +26,12 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+
+# Inclui automaticamente o domínio público atual do Railway.
+_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_domain)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_domain}')
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -64,15 +76,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'tattoo_finance.wsgi.application'
 
-if os.environ.get('MYSQL_DATABASE'):
+# Aceita tanto MYSQL_DATABASE (manual) quanto MYSQLDATABASE (nome nativo do Railway).
+def _mysql_env(*names, default=''):
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return default
+
+_mysql_db = _mysql_env('MYSQL_DATABASE', 'MYSQLDATABASE')
+if _mysql_db:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.environ.get('MYSQL_DATABASE'),
-            'USER': os.environ.get('MYSQL_USER', 'root'),
-            'PASSWORD': os.environ.get('MYSQL_PASSWORD', ''),
-            'HOST': os.environ.get('MYSQL_HOST', '127.0.0.1'),
-            'PORT': os.environ.get('MYSQL_PORT', '3306'),
+            'NAME': _mysql_db,
+            'USER': _mysql_env('MYSQL_USER', 'MYSQLUSER', default='root'),
+            'PASSWORD': _mysql_env('MYSQL_PASSWORD', 'MYSQLPASSWORD'),
+            'HOST': _mysql_env('MYSQL_HOST', 'MYSQLHOST', default='127.0.0.1'),
+            'PORT': _mysql_env('MYSQL_PORT', 'MYSQLPORT', default='3306'),
             'OPTIONS': {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             },
@@ -96,5 +117,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Permite ao WhiteNoise servir direto de STATICFILES_DIRS,
+# sem depender de collectstatic no build.
+WHITENOISE_USE_FINDERS = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
