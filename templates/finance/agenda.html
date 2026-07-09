@@ -1,0 +1,123 @@
+{% extends 'finance/base.html' %}
+{% load finance_extras %}
+
+{% block title %}Agenda — Estúdio{% endblock %}
+
+{% block content %}
+    <div class="layout">
+        <section class="panel form-panel">
+            <h2 class="section-title">Agendar tatuagem</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="field-row">
+                    <label>Cliente
+                        <input type="text" name="client" required>
+                    </label>
+                    <label>Telefone
+                        <input type="tel" name="phone" placeholder="(11) 99999-9999">
+                    </label>
+                </div>
+                <div class="field-row">
+                    <label>Data
+                        <input type="date" name="date" required>
+                    </label>
+                    <label>Horário
+                        <input type="time" name="time" required>
+                    </label>
+                </div>
+                <div class="field-row">
+                    <label>Duração
+                        <select name="duration">
+                            <option value="30">30 min</option>
+                            <option value="60" selected>1 hora</option>
+                            <option value="90">1h30</option>
+                            <option value="120">2 horas</option>
+                            <option value="180">3 horas</option>
+                            <option value="240">4 horas</option>
+                        </select>
+                    </label>
+                    <label>Valor estimado
+                        <input type="text" name="estimated_price" inputmode="decimal" placeholder="500,00">
+                    </label>
+                </div>
+                <label>Descrição da tatuagem
+                    <textarea name="description" rows="2" placeholder="Ex: fechamento de braço, sessão 2"></textarea>
+                </label>
+                <label>Observações
+                    <input type="text" name="notes">
+                </label>
+                <button type="submit" class="btn-primary">Agendar</button>
+            </form>
+        </section>
+
+        <section class="panel list-panel">
+            <div class="agenda-head">
+                <h2 class="section-title">
+                    {% if show == 'historico' %}Histórico{% else %}Próximas sessões{% endif %}
+                </h2>
+                <div class="agenda-tabs">
+                    <a href="{% url 'finance:agenda' %}" class="tab {% if show != 'historico' %}active{% endif %}">Próximas</a>
+                    <a href="{% url 'finance:agenda' %}?show=historico" class="tab {% if show == 'historico' %}active{% endif %}">Histórico</a>
+                </div>
+            </div>
+
+            {% for day in days %}
+            <div class="day-group">
+                <h3 class="day-title">
+                    {% if day.date == today %}Hoje
+                    {% elif day.date == tomorrow %}Amanhã
+                    {% else %}{{ day.date|date:"l" }}
+                    {% endif %}
+                    <span class="day-date">{{ day.date|date:"d/m/Y" }}</span>
+                </h3>
+                {% for appt in day.items %}
+                <article class="appt {% if appt.status == 'concluido' %}is-done{% elif appt.status == 'cancelado' %}is-canceled{% endif %}">
+                    <div class="appt-time">
+                        <strong>{{ appt.time|time:"H:i" }}</strong>
+                        <span>{{ appt.duration_minutes }} min</span>
+                    </div>
+                    <div class="appt-info">
+                        <strong class="appt-client">{{ appt.client }}</strong>
+                        {% if appt.description %}<p class="appt-desc">{{ appt.description }}</p>{% endif %}
+                        <div class="appt-meta">
+                            {% if appt.phone %}<span>{{ appt.phone }}</span>{% endif %}
+                            {% if appt.estimated_price %}<span>R$ {{ appt.estimated_price|brl }}</span>{% endif %}
+                            {% if appt.notes %}<span>{{ appt.notes }}</span>{% endif %}
+                            {% if appt.status != 'agendado' %}<span class="tag">{{ appt.get_status_display }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="appt-actions">
+                        {% if appt.status == 'agendado' %}
+                        <form method="post" action="{% url 'finance:appointment_status' appt.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="concluido">
+                            <input type="hidden" name="next" value="{% url 'finance:list' %}?p_client={{ appt.client|urlencode }}&p_price={{ appt.estimated_price|brl|urlencode }}&p_description={{ appt.description|urlencode }}">
+                            <button type="submit" class="btn-ghost btn-small" title="Marca como concluído e abre o financeiro preenchido">Concluir</button>
+                        </form>
+                        <form method="post" action="{% url 'finance:appointment_status' appt.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="cancelado">
+                            <button type="submit" class="btn-ghost btn-small">Cancelar</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'finance:appointment_delete' appt.pk %}" onsubmit="return confirm('Excluir este agendamento?')">
+                            {% csrf_token %}
+                            {% if show == 'historico' %}<input type="hidden" name="next" value="{% url 'finance:agenda' %}?show=historico">{% endif %}
+                            <button type="submit" class="btn-icon" title="Excluir">&times;</button>
+                        </form>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% empty %}
+            <p class="empty">
+                {% if show == 'historico' %}
+                    Nenhuma sessão no histórico ainda.
+                {% else %}
+                    Nenhuma sessão agendada. Preencha o formulário ao lado para marcar a primeira.
+                {% endif %}
+            </p>
+            {% endfor %}
+        </section>
+    </div>
+{% endblock %}

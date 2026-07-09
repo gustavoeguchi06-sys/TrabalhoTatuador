@@ -1,103 +1,128 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle Financeiro - Tatuador</title>
-    <link rel="stylesheet" href="{% static 'css/visual.css' %}">
-</head>
-<body>
-    <header class="top">
-        <h1>Controle Financeiro - Tatuador</h1>
-    </header>
+{% extends 'finance/base.html' %}
+{% load finance_extras %}
 
-    <main class="container">
+{% block title %}Financeiro — Estúdio{% endblock %}
+
+{% block content %}
+    <section class="stats">
+        <div class="stat">
+            <span class="stat-label">Receita</span>
+            <strong class="stat-value">R$ {{ total_revenue|brl }}</strong>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Despesas</span>
+            <strong class="stat-value negative">R$ {{ total_cost|brl }}</strong>
+        </div>
+        <div class="stat stat-featured">
+            <span class="stat-label">Lucro</span>
+            <strong class="stat-value {% if total_profit >= 0 %}positive{% else %}negative{% endif %}">R$ {{ total_profit|brl }}</strong>
+        </div>
+    </section>
+
+    {% if todays_appointments %}
+    <section class="today-strip">
+        <h2 class="section-title">Hoje na agenda</h2>
+        <div class="today-chips">
+            {% for appt in todays_appointments %}
+            <a class="chip" href="{% url 'finance:agenda' %}">
+                <span class="chip-time">{{ appt.time|time:"H:i" }}</span>
+                <span class="chip-client">{{ appt.client }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="layout">
         <section class="panel form-panel">
-            <h2>Registrar Serviço</h2>
+            <h2 class="section-title">Registrar serviço</h2>
             <form method="post">
                 {% csrf_token %}
-                <div class="row">
-                    <label>Cliente<input type="text" name="client" required></label>
-                    <label>Data<input type="date" name="date" required></label>
+                <div class="field-row">
+                    <label>Cliente
+                        <input type="text" name="client" value="{{ prefill.client }}" required>
+                    </label>
+                    <label>Data
+                        <input type="date" name="date" required>
+                    </label>
                 </div>
-                <label>Descrição do serviço<textarea name="description" rows="2"></textarea></label>
-                <div class="row">
-                    <label>Preço cobrado<input type="number" name="price" step="0.01" required></label>
-                    <label>Custo<input type="number" name="cost" step="0.01" value="0"></label>
+                <label>Descrição do serviço
+                    <textarea name="description" rows="2">{{ prefill.description }}</textarea>
+                </label>
+                <div class="field-row">
+                    <label>Preço cobrado
+                        <input type="text" name="price" inputmode="decimal" placeholder="5.000,00" value="{{ prefill.price }}" required>
+                    </label>
+                    <label>Custo
+                        <input type="text" name="cost" inputmode="decimal" placeholder="0,00" value="0,00">
+                    </label>
+                </div>
+                <div class="field-row">
                     <label>Pagamento
                         <select name="payment">
+                            <option value="Pix">Pix</option>
                             <option value="Dinheiro">Dinheiro</option>
                             <option value="Cartão">Cartão</option>
-                            <option value="Pix">Pix</option>
                             <option value="Outro">Outro</option>
                         </select>
                     </label>
+                    <label>Observações
+                        <input type="text" name="notes">
+                    </label>
                 </div>
-                <label>Observações<input type="text" name="notes"></label>
-                <div class="actions">
-                    <button type="submit">Adicionar</button>
-                </div>
+                <button type="submit" class="btn-primary">Adicionar serviço</button>
             </form>
-        </section>
-
-        <section class="panel summary-panel">
-            <h2>Resumo</h2>
-            <div class="summary-grid">
-                <div class="card">Receita<br><strong>{{ total_revenue|floatformat:2 }}</strong></div>
-                <div class="card">Despesas<br><strong>{{ total_cost|floatformat:2 }}</strong></div>
-                <div class="card">Lucro<br><strong>{{ total_profit|floatformat:2 }}</strong></div>
-            </div>
         </section>
 
         <section class="panel list-panel">
-            <h2>Transações</h2>
+            <h2 class="section-title">Serviços registrados</h2>
             <form method="get" class="filters">
                 <label>De <input type="date" name="from" value="{{ filter_from }}"></label>
                 <label>Até <input type="date" name="to" value="{{ filter_to }}"></label>
-                <label>Cliente <input type="text" name="client" value="{{ filter_client }}"></label>
-                <button type="submit">Aplicar</button>
-                <a href="." class="button">Resetar</a>
+                <label>Cliente <input type="text" name="client" value="{{ filter_client }}" placeholder="Buscar por nome"></label>
+                <div class="filters-actions">
+                    <button type="submit" class="btn-ghost">Filtrar</button>
+                    <a href="{% url 'finance:list' %}" class="btn-ghost">Limpar</a>
+                </div>
             </form>
 
-            <table id="txTable">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Cliente</th>
-                        <th>Serviço</th>
-                        <th>Preço</th>
-                        <th>Custo</th>
-                        <th>Pagamento</th>
-                        <th>Obs</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for tx in transactions %}
-                    <tr>
-                        <td>{{ tx.date }}</td>
-                        <td>{{ tx.client }}</td>
-                        <td>{{ tx.description }}</td>
-                        <td>R$ {{ tx.price }}</td>
-                        <td>R$ {{ tx.cost }}</td>
-                        <td>{{ tx.payment }}</td>
-                        <td>{{ tx.notes }}</td>
-                        <td>
-                            <form method="post" action="{% url 'finance:delete' tx.pk %}" style="display:inline">
-                                {% csrf_token %}
-                                <button type="submit">x</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr><td colspan="8">Nenhuma transação</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Serviço</th>
+                            <th class="num">Preço</th>
+                            <th class="num">Custo</th>
+                            <th>Pagamento</th>
+                            <th>Obs</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for tx in transactions %}
+                        <tr>
+                            <td class="cell-date">{{ tx.date|date:"d/m/y" }}</td>
+                            <td class="cell-client">{{ tx.client }}</td>
+                            <td>{{ tx.description }}</td>
+                            <td class="num cell-price">R$ {{ tx.price|brl }}</td>
+                            <td class="num">R$ {{ tx.cost|brl }}</td>
+                            <td><span class="tag">{{ tx.payment }}</span></td>
+                            <td class="cell-notes">{{ tx.notes }}</td>
+                            <td>
+                                <form method="post" action="{% url 'finance:delete' tx.pk %}" onsubmit="return confirm('Excluir este registro?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-icon" title="Excluir">&times;</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8" class="empty">Nenhum serviço registrado ainda. Use o formulário ao lado para começar.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </section>
-    </main>
-
-    <footer class="foot"></footer>
-</body>
-</html>
+    </div>
+{% endblock %}

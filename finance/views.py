@@ -1,33 +1,46 @@
+import json
+from datetime import timedelta
 from decimal import Decimal
-from django.shortcuts import render, redirect, get_object_or_404
+
 from django.db import models
-from .models import Transaction
-from django.urls import reverse
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+from .models import Appointment, PushSubscription, Transaction
+
+
+def parse_brl(value_str):
+    """Aceita formato brasileiro: milhares com ponto e decimais com vírgula (ex: 5.000,00)."""
+    v = (value_str or '').strip()
+    if v == '':
+        return Decimal('0')
+    clean = v.replace('.', '').replace(',', '.')
+    try:
+        return Decimal(clean)
+    except Exception:
+        return Decimal('0')
+
 
 def list_create(request):
     if request.method == 'POST':
-        client = request.POST.get('client','').strip()
-        date = request.POST.get('date') or None
-        description = request.POST.get('description','').strip()
-        price = request.POST.get('price') or '0'
-        cost = request.POST.get('cost') or '0'
-        payment = request.POST.get('payment','')
-        notes = request.POST.get('notes','')
         Transaction.objects.create(
-            client=client,
-            date=date,
-            description=description,
-            price=Decimal(price),
-            cost=Decimal(cost),
-            payment=payment,
-            notes=notes,
+            client=request.POST.get('client', '').strip(),
+            date=request.POST.get('date') or None,
+            description=request.POST.get('description', '').strip(),
+            price=parse_brl(request.POST.get('price')),
+            cost=parse_brl(request.POST.get('cost')),
+            payment=request.POST.get('payment', ''),
+            notes=request.POST.get('notes', ''),
         )
         return redirect('finance:list')
 
-    qs = Transaction.objects.all().order_by('-date','-id')
-    client_filter = request.GET.get('client','').strip()
-    f_from = request.GET.get('from','')
-    f_to = request.GET.get('to','')
+    qs = Transaction.objects.all().order_by('-date', '-id')
+    client_filter = request.GET.get('client', '').strip()
+    f_from = request.GET.get('from', '')
+    f_to = request.GET.get('to', '')
     if client_filter:
         qs = qs.filter(client__icontains=client_filter)
     if f_from:
@@ -38,20 +51,142 @@ def list_create(request):
     totals = qs.aggregate(total_revenue=models.Sum('price'), total_cost=models.Sum('cost'))
     total_revenue = totals['total_revenue'] or Decimal('0')
     total_cost = totals['total_cost'] or Decimal('0')
-    total_profit = total_revenue - total_cost
+
+    today = timezone.localdate()
+    todays_appointments = Appointment.objects.filter(date=today, status='agendado')
 
     context = {
         'transactions': qs,
         'total_revenue': total_revenue,
         'total_cost': total_cost,
-        'total_profit': total_profit,
+        'total_profit': total_revenue - total_cost,
         'filter_client': client_filter,
         'filter_from': f_from,
         'filter_to': f_to,
+        'todays_appointments': todays_appointments,
+        'prefill': {
+            'client': request.GET.get('p_client', ''),
+            'price': request.GET.get('p_price', ''),
+            'description': request.GET.get('p_description', ''),
+        },
+        'active_page': 'finance',
     }
     return render(request, 'finance/front.html', context)
+
 
 def delete_tx(request, pk):
     tx = get_object_or_404(Transaction, pk=pk)
     tx.delete()
     return redirect('finance:list')
+
+
+def agenda(request):
+    if request.method == 'POST':
+        Appointment.objects.create(
+            client=request.POST.get('client', '').strip(),
+            phone=request.POST.get('phone', '').strip(),
+            date=request.POST.get('date') or None,
+            time=request.POST.get('time') or None,
+            duration_minutes=int(request.POST.get('duration') or 60),
+            description=request.POST.get('description', '').strip(),
+            estimated_price=parse_brl(request.POST.get('estimated_price')),
+            notes=request.POST.get('notes', ''),
+        )
+        return redirect('finance:agenda')
+
+    today = timezone.localdate()
+    show = request.GET.get('show', 'proximos')
+
+    if show == 'historico':
+        qs = Appointment.objects.filter(
+            models.Q(date__lt=today) | ~models.Q(status='agendado')
+        ).order_by('-date', '-time')
+    else:
+        qs = Appointment.objects.filter(date__gte=today, status='agendado')
+
+    # agrupa por dia para exibição
+    days = []
+    for appt in qs:
+        if days and days[-1]['date'] == appt.date:
+            days[-1]['items'].append(appt)
+        else:
+            days.append({'date': appt.date, 'items': [appt]})
+
+    context = {
+        'days': days,
+        'show': show,
+        'today': today,
+        'tomorrow': today + timedelta(days=1),
+        'todays_count': Appointment.objects.filter(date=today, status='agendado').count(),
+        'active_page': 'agenda',
+    }
+    return render(request, 'finance/agenda.html', context)
+
+
+@require_POST
+def appointment_status(request, pk):
+    appt = get_object_or_404(Appointment, pk=pk)
+    status = request.POST.get('status')
+    if status in ('agendado', 'concluido', 'cancelado'):
+        appt.status = status
+        appt.save()
+    return redirect(request.POST.get('next') or 'finance:agenda')
+
+
+@require_POST
+def appointment_delete(request, pk):
+    appt = get_object_or_404(Appointment, pk=pk)
+    appt.delete()
+    return redirect(request.POST.get('next') or 'finance:agenda')
+
+
+# ---------- Notificações push ----------
+
+def service_worker(request):
+    js = """
+self.addEventListener('push', function (event) {
+  let data = { title: 'Lembrete', body: '' };
+  try { data = event.data.json(); } catch (e) {}
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: '/static/img/icon.png',
+    badge: '/static/img/icon.png',
+    lang: 'pt-BR',
+  }));
+});
+
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  event.waitUntil(clients.matchAll({ type: 'window' }).then(function (list) {
+    for (const c of list) { if ('focus' in c) return c.focus(); }
+    return clients.openWindow('/agenda/');
+  }));
+});
+"""
+    return HttpResponse(js, content_type='application/javascript')
+
+
+def vapid_public_key(request):
+    from .webpush import get_public_key
+    return JsonResponse({'publicKey': get_public_key()})
+
+
+@require_POST
+def push_subscribe(request):
+    try:
+        data = json.loads(request.body)
+        endpoint = data['endpoint']
+    except (json.JSONDecodeError, KeyError):
+        return JsonResponse({'ok': False}, status=400)
+    PushSubscription.objects.update_or_create(
+        endpoint=endpoint,
+        defaults={'subscription_json': json.dumps(data)},
+    )
+    return JsonResponse({'ok': True})
+
+
+@require_POST
+def push_test(request):
+    from .webpush import send_push_to_all
+    sent = send_push_to_all('🔔 Notificações ativas', 'Você vai receber os lembretes da agenda por aqui.')
+    return JsonResponse({'ok': True, 'sent': sent})

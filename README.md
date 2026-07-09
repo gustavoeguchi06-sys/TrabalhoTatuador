@@ -1,18 +1,36 @@
-# Controle Financeiro — Tatuador
+# Controle Financeiro & Agenda — Tatuador
 ## Visão geral
 
-Este projeto fornece uma aplicação web simples para registrar serviços de tatuagem e acompanhar as finanças (receitas, custos e lucro). A implementação atual usa Django para renderizar o front-end no servidor e SQLite para armazenamento local.
+Este projeto fornece uma aplicação web para registrar serviços de tatuagem, acompanhar as finanças (receitas, custos e lucro) e gerenciar a agenda de sessões com lembretes por notificação push do navegador. A implementação usa Django para renderizar o front-end no servidor e SQLite para armazenamento local.
 
 Principais componentes
-- Backend: Django app `finance` (modelo `Transaction`, views, URLs e admin).
-- Front-end: template server-rendered em `templates/finance/front.html` e estilos em `static/css/visual.css`.
+- Backend: Django app `finance` (modelos `Transaction`, `Appointment`, `PushSubscription`, views, URLs e admin).
+- Front-end: templates server-rendered em `templates/finance/` e estilos em `static/css/visual.css`.
+- Notificações: Web Push (pywebpush + VAPID) com service worker e verificador de lembretes em background.
 
 ## Funcionalidades implementadas
 
 - Registrar serviços (cliente, data, descrição, preço, custo, forma de pagamento, observações).
 - Listar transações com filtros por período e cliente.
 - Resumo financeiro (receita total, despesas, lucro) calculado no servidor.
+- Agenda de tatuagens (`/agenda/`): agendar sessões com cliente, telefone, data, horário, duração e valor estimado; concluir, cancelar ou excluir; histórico de sessões.
+- Ao concluir uma sessão, o formulário do financeiro abre pré-preenchido com cliente, valor e descrição.
+- Notificações push do navegador com três lembretes automáticos:
+  - 🔔 Resumo do dia a partir das 08:00 — "Hoje você tem N atendimentos."
+  - 🔔 1 hora antes — "Você tem uma tatuagem às 14:00."
+  - 🔔 30 minutos antes — "Sua próxima sessão é em 30 minutos."
 - Interface administrativa via Django Admin (`/admin`).
+
+## Como ativar as notificações
+
+1. Inicie o servidor e abra o sistema no navegador (Chrome, Edge ou Firefox).
+2. Clique em **"Ativar lembretes"** (sino no topo da página) e permita as notificações quando o navegador perguntar.
+3. Pronto — uma notificação de confirmação é enviada na hora e os lembretes da agenda passam a chegar automaticamente enquanto o servidor estiver rodando.
+
+Observações:
+- As chaves VAPID são geradas automaticamente no primeiro uso e salvas em `vapid_private_key.pem` (não versionar).
+- O verificador de lembretes roda em background junto com o servidor (checagem a cada 60 segundos, fuso `America/Sao_Paulo`).
+- Notificações push exigem contexto seguro: funcionam em `http://localhost` / `127.0.0.1` ou via HTTPS em produção.
 
 ## Requisitos
 
