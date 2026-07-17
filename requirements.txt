@@ -3,3 +3,4 @@ PyMySQL>=1.0.2
 pywebpush>=2.0
 gunicorn
 whitenoise
+python-dotenv>=1.0

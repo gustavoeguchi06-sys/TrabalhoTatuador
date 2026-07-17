@@ -13,7 +13,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
-print("🚨 SETTINGS ATIVO:", __name__)
+# Load environment variables from a local .env file when present
+from dotenv import load_dotenv
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,11 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m)i5qr7ccoq9_3-4@x$#*-e!tywj!!&mmt*&svtnzi)r5gbkt('
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+
+# Load .env from project root (BASE_DIR defined below)
+
+load_dotenv(Path(__file__).resolve().parent.parent / '.env')
 
 try:
     import pymysql
@@ -34,23 +37,18 @@ try:
 except Exception:
     pass
 
-ALLOWED_HOSTS = [
-    "trabalhotatuador-production.up.railway.app",
-    "localhost",
-    "127.0.0.1",
-]
+# Hosts and CSRF origins can be configured via environment variables
+ALLOWED_HOSTS = os.environ.get(
+    'DJANGO_ALLOWED_HOSTS',
+    'trabalhotatuador-production.up.railway.app,localhost,127.0.0.1'
+).split(',')
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://trabalhotatuador-production.up.railway.app",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    'https://trabalhotatuador-production.up.railway.app,http://localhost:8000,http://127.0.0.1:8000'
+).split(',')
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-print("🔥 SETTINGS CARREGADO")
-print("CSRF:", CSRF_TRUSTED_ORIGINS)
-print("ALLOWED:", ALLOWED_HOSTS)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -113,6 +111,14 @@ else:
         }
     }
 
+# Secret key handling: prefer environment variable; provide insecure default only for DEBUG
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'insecure-development-key'
+    else:
+        raise RuntimeError('DJANGO_SECRET_KEY environment variable not set')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -149,3 +155,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Recommended default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Use whitenoise in production when present
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
