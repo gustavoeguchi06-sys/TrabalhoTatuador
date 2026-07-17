@@ -162,4 +162,3 @@ Observações:
 
 ---
 
-Arquivo atualizado para apresentar instruções e contexto de forma profissional.
