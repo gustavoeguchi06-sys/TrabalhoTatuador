@@ -1,0 +1,25 @@
+{% extends 'finance/base.html' %}
+
+{% block title %}Entrar — Estúdio{% endblock %}
+
+{% block content %}
+    <section class="panel form-panel login-panel">
+        <h2 class="section-title">Entrar</h2>
+        {% if form.errors %}
+        <div class="form-errors">
+            Usuário ou senha inválidos. Tente novamente.
+        </div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <label>Usuário
+                <input type="text" name="username" autofocus autocomplete="username" required>
+            </label>
+            <label>Senha
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" class="btn-primary">Entrar</button>
+        </form>
+    </section>
+{% endblock %}

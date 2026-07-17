@@ -36,6 +36,15 @@
     <div class="layout">
         <section class="panel form-panel">
             <h2 class="section-title">Registrar serviço</h2>
+            {% if form.errors %}
+            <div class="form-errors">
+                <strong>Corrija os campos abaixo:</strong>
+                <ul>
+                    {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
             <form method="post">
                 {% csrf_token %}
                 <div class="field-row">
@@ -43,7 +52,7 @@
                         <input type="text" name="client" value="{{ prefill.client }}" required>
                     </label>
                     <label>Data
-                        <input type="date" name="date" required>
+                        <input type="date" name="date" value="{{ form.data.date }}" required>
                     </label>
                 </div>
                 <label>Descrição do serviço
@@ -54,7 +63,7 @@
                         <input type="text" name="price" inputmode="decimal" placeholder="5.000,00" value="{{ prefill.price }}" required>
                     </label>
                     <label>Custo
-                        <input type="text" name="cost" inputmode="decimal" placeholder="0,00" value="0,00">
+                        <input type="text" name="cost" inputmode="decimal" placeholder="0,00" value="{{ form.data.cost|default:'0,00' }}">
                     </label>
                 </div>
                 <div class="field-row">
@@ -67,7 +76,7 @@
                         </select>
                     </label>
                     <label>Observações
-                        <input type="text" name="notes">
+                        <input type="text" name="notes" value="{{ form.data.notes }}">
                     </label>
                 </div>
                 <button type="submit" class="btn-primary">Adicionar serviço</button>

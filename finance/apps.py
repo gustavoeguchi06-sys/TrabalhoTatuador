@@ -15,7 +15,8 @@ class FinanceConfig(AppConfig):
         is_reloader_child = os.environ.get('RUN_MAIN') == 'true'
         if is_runserver and not is_reloader_child:
             return
-        if any(cmd in sys.argv for cmd in ('migrate', 'makemigrations', 'test', 'shell', 'collectstatic')):
+        if any(cmd in sys.argv for cmd in ('migrate', 'makemigrations', 'test', 'shell',
+                                           'collectstatic', 'createsuperuser', 'send_reminders')):
             return
         from . import reminders
         reminders.start_scheduler()

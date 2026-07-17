@@ -7,44 +7,55 @@
     <div class="layout">
         <section class="panel form-panel">
             <h2 class="section-title">Agendar tatuagem</h2>
+            {% if form.errors %}
+            <div class="form-errors">
+                <strong>Corrija os campos abaixo:</strong>
+                <ul>
+                    {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
             <form method="post">
                 {% csrf_token %}
                 <div class="field-row">
                     <label>Cliente
-                        <input type="text" name="client" required>
+                        <input type="text" name="client" value="{{ form.data.client }}" required>
                     </label>
                     <label>Telefone
-                        <input type="tel" name="phone" placeholder="(11) 99999-9999">
+                        <input type="tel" name="phone" value="{{ form.data.phone }}" placeholder="(11) 99999-9999">
                     </label>
                 </div>
                 <div class="field-row">
                     <label>Data
-                        <input type="date" name="date" required>
+                        <input type="date" name="date" value="{{ form.data.date }}" required>
                     </label>
                     <label>Horário
-                        <input type="time" name="time" required>
+                        <input type="time" name="time" value="{{ form.data.time }}" required>
                     </label>
                 </div>
                 <div class="field-row">
                     <label>Duração
-                        <select name="duration">
-                            <option value="30">30 min</option>
-                            <option value="60" selected>1 hora</option>
-                            <option value="90">1h30</option>
-                            <option value="120">2 horas</option>
-                            <option value="180">3 horas</option>
-                            <option value="240">4 horas</option>
+                        <select name="duration_minutes">
+                            {% with chosen=form.data.duration_minutes|default:'60' %}
+                            <option value="30" {% if chosen == '30' %}selected{% endif %}>30 min</option>
+                            <option value="60" {% if chosen == '60' %}selected{% endif %}>1 hora</option>
+                            <option value="90" {% if chosen == '90' %}selected{% endif %}>1h30</option>
+                            <option value="120" {% if chosen == '120' %}selected{% endif %}>2 horas</option>
+                            <option value="180" {% if chosen == '180' %}selected{% endif %}>3 horas</option>
+                            <option value="240" {% if chosen == '240' %}selected{% endif %}>4 horas</option>
+                            {% endwith %}
                         </select>
                     </label>
                     <label>Valor estimado
-                        <input type="text" name="estimated_price" inputmode="decimal" placeholder="500,00">
+                        <input type="text" name="estimated_price" value="{{ form.data.estimated_price }}" inputmode="decimal" placeholder="500,00">
                     </label>
                 </div>
                 <label>Descrição da tatuagem
-                    <textarea name="description" rows="2" placeholder="Ex: fechamento de braço, sessão 2"></textarea>
+                    <textarea name="description" rows="2" placeholder="Ex: fechamento de braço, sessão 2">{{ form.data.description }}</textarea>
                 </label>
                 <label>Observações
-                    <input type="text" name="notes">
+                    <input type="text" name="notes" value="{{ form.data.notes }}">
                 </label>
                 <button type="submit" class="btn-primary">Agendar</button>
             </form>

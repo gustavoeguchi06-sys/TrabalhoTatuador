@@ -293,3 +293,18 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important}
 }
+
+/* ---------- login e erros de formulário ---------- */
+.form-errors{
+  background:rgba(242,162,162,.08);
+  border:1px solid rgba(242,162,162,.35);
+  border-radius:var(--radius);
+  color:var(--negative);
+  font-size:.9rem;
+  padding:12px 16px;
+  margin-bottom:16px;
+}
+.form-errors ul{margin:6px 0 0;padding-left:18px}
+.form-errors li{margin:2px 0}
+.login-panel{max-width:420px;margin:48px auto 0}
+.logout-form{display:inline}

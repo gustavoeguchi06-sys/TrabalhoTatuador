@@ -75,7 +75,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 .venv\Scripts\python.exe manage.py migrate
 ```
 
-5. (Opcional) Crie um superusuário para acessar o admin:
+5. Crie um usuário para entrar no sistema (o app inteiro exige login):
 
 ```powershell
 .venv\Scripts\python.exe manage.py createsuperuser
@@ -87,7 +87,20 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 .venv\Scripts\python.exe manage.py runserver 8000
 ```
 
-7. Abra o navegador em: http://127.0.0.1:8000/
+7. Abra o navegador em: http://127.0.0.1:8000/ e entre com o usuário criado no passo 5.
+
+## Autenticação
+
+Todas as páginas e endpoints exigem login (`LoginRequiredMiddleware`); apenas `/sw.js` (service worker) e a própria tela de login são públicos. Crie usuários com `createsuperuser` ou pelo admin em `/admin`.
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env` e ajuste. As principais:
+
+- `DJANGO_SECRET_KEY` — **obrigatória em produção**; sem ela o app não sobe (em desenvolvimento com `DJANGO_DEBUG=True` há um valor padrão inseguro).
+- `DJANGO_DEBUG` — `True` local, `False` em produção (padrão no Railway).
+- `MYSQL_*` / `MYSQL*` — conexão MySQL; **no Railway são obrigatórias** (sem elas o deploy falha em vez de cair no SQLite efêmero e perder dados).
+- `VAPID_PRIVATE_KEY` — conteúdo do PEM da chave de push; necessária em produção para as inscrições sobreviverem aos deploys.
 
 ## Estrutura do projeto
 
@@ -143,16 +156,22 @@ Observações:
 - O `tattoo_finance/settings.py` detecta a presença da variável `MYSQL_DATABASE` e, se encontrada, configura Django para usar MySQL; caso contrário, permanece em SQLite.
 - No Windows a instalação de `mysqlclient` (biblioteca nativa) pode requerer dependências C; por isso o projeto usa `PyMySQL` (pure-Python) para compatibilidade mais fácil. Se preferir `mysqlclient`, instale-o e ajuste `requirements.txt`.
 
-## Testes manuais e validação
+## Testes
 
-- Execute o servidor e acesse a página principal; crie algumas transações para validar cálculos de receita/custo/lucro.
-- Verifique o admin em `/admin` (após criar superusuário) para inspeção direta dos registros.
+```powershell
+.venv\Scripts\python.exe manage.py test finance
+```
+
+Cobrem: parsing de valores em formato brasileiro, validação dos formulários, exigência de login, exclusão apenas via POST, totais financeiros e idempotência dos lembretes.
+
+## Lembretes: thread ou cron
+
+Por padrão o verificador roda numa thread dentro do processo web (checagem a cada 60 s). Alternativa mais robusta para produção: agendar `python manage.py send_reminders` num cron (ex: a cada 5 minutos no Railway). O `NotificationLog` impede envios duplicados mesmo com os dois ativos.
 
 ## Próximos passos recomendados
 
 - Adicionar API REST (Django REST Framework) para suportar front-end JavaScript e integrações móveis.
 - Exportar/importar CSV para backup e transferências de dados.
-- Adicionar autenticação multi-usuário para que cada tatuador gerencie suas próprias transações.
 - Relatórios por período (mensal, anual) e gráficos para análise visual.
 
 ## Suporte e contribuições

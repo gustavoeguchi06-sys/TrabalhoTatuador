@@ -2,40 +2,32 @@ import json
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.auth.decorators import login_not_required
 from django.db import models
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from .forms import AppointmentForm, TransactionForm
 from .models import Appointment, PushSubscription, Transaction
 
 
-def parse_brl(value_str):
-    """Aceita formato brasileiro: milhares com ponto e decimais com vírgula (ex: 5.000,00)."""
-    v = (value_str or '').strip()
-    if v == '':
-        return Decimal('0')
-    clean = v.replace('.', '').replace(',', '.')
-    try:
-        return Decimal(clean)
-    except Exception:
-        return Decimal('0')
+def _safe_next(request, fallback):
+    """Só aceita redirecionamento 'next' para URLs do próprio site."""
+    nxt = request.POST.get('next', '')
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
+        return nxt
+    return fallback
 
 
 def list_create(request):
+    form = TransactionForm(request.POST or None)
     if request.method == 'POST':
-        Transaction.objects.create(
-            client=request.POST.get('client', '').strip(),
-            date=request.POST.get('date') or None,
-            description=request.POST.get('description', '').strip(),
-            price=parse_brl(request.POST.get('price')),
-            cost=parse_brl(request.POST.get('cost')),
-            payment=request.POST.get('payment', ''),
-            notes=request.POST.get('notes', ''),
-        )
-        return redirect('finance:list')
+        if form.is_valid():
+            form.save()
+            return redirect('finance:list')
 
     qs = Transaction.objects.all().order_by('-date', '-id')
     client_filter = request.GET.get('client', '').strip()
@@ -55,7 +47,23 @@ def list_create(request):
     today = timezone.localdate()
     todays_appointments = Appointment.objects.filter(date=today, status='agendado')
 
+    # Reaproveita o que o usuário digitou (POST inválido) ou o pré-preenchimento
+    # vindo da agenda ao concluir uma sessão.
+    if form.is_bound:
+        prefill = {
+            'client': form.data.get('client', ''),
+            'price': form.data.get('price', ''),
+            'description': form.data.get('description', ''),
+        }
+    else:
+        prefill = {
+            'client': request.GET.get('p_client', ''),
+            'price': request.GET.get('p_price', ''),
+            'description': request.GET.get('p_description', ''),
+        }
+
     context = {
+        'form': form,
         'transactions': qs,
         'total_revenue': total_revenue,
         'total_cost': total_cost,
@@ -64,16 +72,13 @@ def list_create(request):
         'filter_from': f_from,
         'filter_to': f_to,
         'todays_appointments': todays_appointments,
-        'prefill': {
-            'client': request.GET.get('p_client', ''),
-            'price': request.GET.get('p_price', ''),
-            'description': request.GET.get('p_description', ''),
-        },
+        'prefill': prefill,
         'active_page': 'finance',
     }
     return render(request, 'finance/front.html', context)
 
 
+@require_POST
 def delete_tx(request, pk):
     tx = get_object_or_404(Transaction, pk=pk)
     tx.delete()
@@ -81,18 +86,11 @@ def delete_tx(request, pk):
 
 
 def agenda(request):
+    form = AppointmentForm(request.POST or None)
     if request.method == 'POST':
-        Appointment.objects.create(
-            client=request.POST.get('client', '').strip(),
-            phone=request.POST.get('phone', '').strip(),
-            date=request.POST.get('date') or None,
-            time=request.POST.get('time') or None,
-            duration_minutes=int(request.POST.get('duration') or 60),
-            description=request.POST.get('description', '').strip(),
-            estimated_price=parse_brl(request.POST.get('estimated_price')),
-            notes=request.POST.get('notes', ''),
-        )
-        return redirect('finance:agenda')
+        if form.is_valid():
+            form.save()
+            return redirect('finance:agenda')
 
     today = timezone.localdate()
     show = request.GET.get('show', 'proximos')
@@ -113,6 +111,7 @@ def agenda(request):
             days.append({'date': appt.date, 'items': [appt]})
 
     context = {
+        'form': form,
         'days': days,
         'show': show,
         'today': today,
@@ -130,19 +129,22 @@ def appointment_status(request, pk):
     if status in ('agendado', 'concluido', 'cancelado'):
         appt.status = status
         appt.save()
-    return redirect(request.POST.get('next') or 'finance:agenda')
+    return redirect(_safe_next(request, 'finance:agenda'))
 
 
 @require_POST
 def appointment_delete(request, pk):
     appt = get_object_or_404(Appointment, pk=pk)
     appt.delete()
-    return redirect(request.POST.get('next') or 'finance:agenda')
+    return redirect(_safe_next(request, 'finance:agenda'))
 
 
 # ---------- Notificações push ----------
 
+@login_not_required
 def service_worker(request):
+    # O navegador busca o sw.js em segundo plano (inclusive para atualizações),
+    # por isso ele fica fora da exigência de login. Não expõe nenhum dado.
     js = """
 self.addEventListener('push', function (event) {
   let data = { title: 'Lembrete', body: '' };

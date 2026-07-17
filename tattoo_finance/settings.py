@@ -1,11 +1,14 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY
-# In production, set environment variable SECRET_KEY to a secure value.
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-placeholder-key')
+# Carrega variáveis de um .env local, se existir (em produção use as
+# variáveis de ambiente da plataforma).
+load_dotenv(BASE_DIR / '.env')
 
 # Detecta se está rodando no Railway (a plataforma define essa variável).
 ON_RAILWAY = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
@@ -14,6 +17,19 @@ ON_RAILWAY = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
 # Pode ser forçado com a variável DJANGO_DEBUG.
 _default_debug = 'False' if ON_RAILWAY else 'True'
 DEBUG = os.environ.get('DJANGO_DEBUG', _default_debug).lower() in ('1', 'true', 'yes')
+
+# SECURITY
+# Em produção a SECRET_KEY precisa vir do ambiente; sem ela o deploy falha
+# em vez de rodar com uma chave pública e adivinhável.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'insecure-development-key'
+    else:
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY não definida. Configure a variável de ambiente '
+            'com um valor secreto antes de rodar em produção.'
+        )
 
 ALLOWED_HOSTS = [
     "trabalhotatuador-production.up.railway.app",
@@ -35,6 +51,15 @@ if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# Endurecimento aplicado apenas em produção (DEBUG desligado).
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30  # 30 dias
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -52,9 +77,15 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Exige login em todas as views, exceto as marcadas com @login_not_required.
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'finance:list'
+LOGOUT_REDIRECT_URL = 'login'
 
 ROOT_URLCONF = 'tattoo_finance.urls'
 
@@ -85,6 +116,13 @@ def _mysql_env(*names, default=''):
     return default
 
 _mysql_db = _mysql_env('MYSQL_DATABASE', 'MYSQLDATABASE')
+if ON_RAILWAY and not _mysql_db:
+    # No Railway o disco é efêmero: cair silenciosamente no SQLite significa
+    # perder todos os dados no próximo deploy. Melhor falhar com erro claro.
+    raise ImproperlyConfigured(
+        'Variáveis do MySQL não encontradas no Railway (MYSQL_DATABASE/MYSQLDATABASE). '
+        'Vincule o serviço MySQL ou defina as variáveis de conexão.'
+    )
 if _mysql_db:
     DATABASES = {
         'default': {
@@ -107,7 +145,12 @@ else:
         }
     }
 
-AUTH_PASSWORD_VALIDATORS = []
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
 
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'

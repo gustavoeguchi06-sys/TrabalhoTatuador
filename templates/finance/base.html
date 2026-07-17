@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     {# ?v= força o navegador a baixar a versão nova quando o CSS/JS mudar #}
-    <link rel="stylesheet" href="{% static 'css/visual.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/visual.css' %}?v=4">
 </head>
 <body>
     <header class="top">
@@ -24,6 +24,7 @@
                 </svg>
                 <span>Estúdio</span>
             </a>
+            {% if user.is_authenticated %}
             <nav class="nav">
                 <a href="{% url 'finance:list' %}" class="nav-link {% if active_page == 'finance' %}active{% endif %}">Financeiro</a>
                 <a href="{% url 'finance:agenda' %}" class="nav-link {% if active_page == 'agenda' %}active{% endif %}">Agenda</a>
@@ -32,6 +33,11 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.3l-1.5 3.2a.8.8 0 0 0 .7 1.1h13.6a.8.8 0 0 0 .7-1.1L18 12.3V9a6 6 0 0 0-6-6Zm-2 15a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
                 <span id="btnNotifyLabel">Ativar lembretes</span>
             </button>
+            <form method="post" action="{% url 'logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="btn-ghost btn-small" title="Sair da conta">Sair</button>
+            </form>
+            {% endif %}
         </div>
     </header>
 
