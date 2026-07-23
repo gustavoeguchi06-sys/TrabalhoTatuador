@@ -1,0 +1,3 @@
+# Scripts de shell precisam de fim de linha LF para rodar no Linux do Render.
+*.sh text eol=lf
+build.sh text eol=lf

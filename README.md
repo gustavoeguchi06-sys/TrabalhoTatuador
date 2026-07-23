@@ -98,9 +98,30 @@ Todas as páginas e endpoints exigem login (`LoginRequiredMiddleware`); apenas `
 Copie `.env.example` para `.env` e ajuste. As principais:
 
 - `DJANGO_SECRET_KEY` — **obrigatória em produção**; sem ela o app não sobe (em desenvolvimento com `DJANGO_DEBUG=True` há um valor padrão inseguro).
-- `DJANGO_DEBUG` — `True` local, `False` em produção (padrão no Railway).
-- `MYSQL_*` / `MYSQL*` — conexão MySQL; **no Railway são obrigatórias** (sem elas o deploy falha em vez de cair no SQLite efêmero e perder dados).
+- `DJANGO_DEBUG` — `True` local, `False` em produção (padrão no Render).
+- `DATABASE_URL` — conexão do banco; **no Render é obrigatória** (sem ela o deploy falha em vez de cair no SQLite efêmero e perder dados). É injetada automaticamente ao vincular um Postgres do Render.
+- `MYSQL_*` — alternativa ao `DATABASE_URL` para quem usa MySQL; se `DATABASE_URL` estiver definida, ela tem prioridade.
+- `DJANGO_ALLOWED_HOSTS` — hosts extras (domínio personalizado), separados por vírgula; o domínio `*.onrender.com` é adicionado automaticamente.
 - `VAPID_PRIVATE_KEY` — conteúdo do PEM da chave de push; necessária em produção para as inscrições sobreviverem aos deploys.
+
+## Deploy no Render
+
+O repositório já vem com um Blueprint (`render.yaml`) que provisiona o serviço web e um banco Postgres.
+
+1. Faça push do projeto para um repositório no GitHub/GitLab.
+2. No [dashboard do Render](https://dashboard.render.com/), clique em **New > Blueprint** e selecione o repositório. O Render lê o `render.yaml` e cria o Postgres e o serviço web.
+3. Antes do primeiro deploy, defina a variável **`VAPID_PRIVATE_KEY`** no serviço web (Environment) com o conteúdo do seu `vapid_private_key.pem`. Sem ela, as inscrições de push são perdidas a cada deploy.
+   - `DJANGO_SECRET_KEY` é gerada automaticamente pelo Render e `DATABASE_URL` é vinculada ao Postgres — não precisa preencher à mão.
+4. O build roda `bash build.sh` (instala dependências, `collectstatic` e `migrate`); o serviço sobe com `gunicorn tattoo_finance.wsgi:application`.
+5. Após o deploy, crie o usuário de acesso pelo Shell do serviço no Render:
+
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+Observações:
+- O disco do Render é efêmero: os dados ficam no Postgres, não em SQLite. O app falha no boot se `DATABASE_URL` não estiver presente em produção, justamente para evitar perda silenciosa de dados.
+- No plano gratuito o serviço hiberna após inatividade; os lembretes em thread só rodam com o serviço ativo. Para lembretes confiáveis, use um Cron Job do Render chamando `python manage.py send_reminders`.
 
 ## Estrutura do projeto
 
@@ -166,7 +187,7 @@ Cobrem: parsing de valores em formato brasileiro, validação dos formulários, 
 
 ## Lembretes: thread ou cron
 
-Por padrão o verificador roda numa thread dentro do processo web (checagem a cada 60 s). Alternativa mais robusta para produção: agendar `python manage.py send_reminders` num cron (ex: a cada 5 minutos no Railway). O `NotificationLog` impede envios duplicados mesmo com os dois ativos.
+Por padrão o verificador roda numa thread dentro do processo web (checagem a cada 60 s). Alternativa mais robusta para produção: agendar `python manage.py send_reminders` num cron (ex: um Cron Job do Render a cada 5 minutos). O `NotificationLog` impede envios duplicados mesmo com os dois ativos.
 
 ## Próximos passos recomendados
 

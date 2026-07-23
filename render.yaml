@@ -1,0 +1,35 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec).
+# Cria o banco Postgres e o serviço web da aplicação a partir deste repositório.
+databases:
+  - name: tattoo-finance-db
+    plan: free
+    databaseName: tattoo_finance
+    user: tattoo_finance
+
+services:
+  - type: web
+    name: tattoo-finance
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: "bash ./build.sh"
+    startCommand: "gunicorn tattoo_finance.wsgi:application"
+    # Sem healthCheckPath: o Render detecta o serviço pela porta aberta. Evita
+    # falso negativo no health check por causa do redirect HTTP->HTTPS (DEBUG=False).
+    envVars:
+      # Conexão do Postgres criado acima (injetada automaticamente).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tattoo-finance-db
+          property: connectionString
+      # Gera uma SECRET_KEY forte no primeiro deploy e a mantém fixa.
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Chave VAPID (conteúdo do PEM) para as inscrições push sobreviverem aos
+      # deploys. Defina o valor no painel do Render (marcada como não sincronizada).
+      - key: VAPID_PRIVATE_KEY
+        sync: false

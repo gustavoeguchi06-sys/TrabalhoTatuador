@@ -10,12 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # variáveis de ambiente da plataforma).
 load_dotenv(BASE_DIR / '.env')
 
-# Detecta se está rodando no Railway (a plataforma define essa variável).
-ON_RAILWAY = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+# Detecta se está rodando no Render (a plataforma define RENDER=true).
+ON_RENDER = bool(os.environ.get('RENDER'))
 
-# DEBUG: desligado por padrão no Railway; ligado localmente.
+# DEBUG: desligado por padrão no Render; ligado localmente.
 # Pode ser forçado com a variável DJANGO_DEBUG.
-_default_debug = 'False' if ON_RAILWAY else 'True'
+_default_debug = 'False' if ON_RENDER else 'True'
 DEBUG = os.environ.get('DJANGO_DEBUG', _default_debug).lower() in ('1', 'true', 'yes')
 
 # SECURITY
@@ -32,22 +32,27 @@ if not SECRET_KEY:
         )
 
 ALLOWED_HOSTS = [
-    "trabalhotatuador-production.up.railway.app",
     "localhost",
     "127.0.0.1",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://trabalhotatuador-production.up.railway.app",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
 
-# Inclui automaticamente o domínio público atual do Railway.
-_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
-if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(_railway_domain)
-    CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_domain}')
+# Inclui automaticamente o domínio público atual do Render.
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
+
+# Hosts extras via env (ex.: domínio personalizado), separados por vírgula.
+_extra_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+for _host in (h.strip() for h in _extra_hosts.split(',')):
+    if _host and _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+        CSRF_TRUSTED_ORIGINS.append(f'https://{_host}')
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -107,7 +112,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'tattoo_finance.wsgi.application'
 
-# Aceita tanto MYSQL_DATABASE (manual) quanto MYSQLDATABASE (nome nativo do Railway).
+# Banco de dados. Ordem de preferência:
+#   1. DATABASE_URL — fornecida pelo Render ao vincular um Postgres.
+#   2. Variáveis MYSQL_* — compatibilidade com setups MySQL existentes.
+#   3. SQLite local — apenas desenvolvimento.
 def _mysql_env(*names, default=''):
     for name in names:
         value = os.environ.get(name)
@@ -115,15 +123,20 @@ def _mysql_env(*names, default=''):
             return value
     return default
 
+_database_url = os.environ.get('DATABASE_URL')
 _mysql_db = _mysql_env('MYSQL_DATABASE', 'MYSQLDATABASE')
-if ON_RAILWAY and not _mysql_db:
-    # No Railway o disco é efêmero: cair silenciosamente no SQLite significa
-    # perder todos os dados no próximo deploy. Melhor falhar com erro claro.
-    raise ImproperlyConfigured(
-        'Variáveis do MySQL não encontradas no Railway (MYSQL_DATABASE/MYSQLDATABASE). '
-        'Vincule o serviço MySQL ou defina as variáveis de conexão.'
-    )
-if _mysql_db:
+
+if _database_url:
+    import dj_database_url
+
+    DATABASES = {
+        'default': dj_database_url.parse(
+            _database_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif _mysql_db:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -137,6 +150,13 @@ if _mysql_db:
             },
         }
     }
+elif ON_RENDER:
+    # No Render o disco é efêmero: cair silenciosamente no SQLite significa
+    # perder todos os dados no próximo deploy. Melhor falhar com erro claro.
+    raise ImproperlyConfigured(
+        'DATABASE_URL não encontrada no Render. Vincule um banco Postgres ao '
+        'serviço (ou defina as variáveis MYSQL_*) antes de fazer o deploy.'
+    )
 else:
     DATABASES = {
         'default': {

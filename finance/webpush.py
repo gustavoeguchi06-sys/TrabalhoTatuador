@@ -2,7 +2,7 @@
 
 Ordem de busca da chave privada:
 1. Variável de ambiente VAPID_PRIVATE_KEY (conteúdo do PEM) — necessária em
-   plataformas com disco efêmero, como o Railway, para as inscrições
+   plataformas com disco efêmero, como o Render, para as inscrições
    sobreviverem aos deploys.
 2. Arquivo BASE_DIR/vapid_private_key.pem (criado no primeiro uso).
 """

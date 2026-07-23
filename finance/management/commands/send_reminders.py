@@ -1,6 +1,6 @@
 """Roda uma verificação da agenda e envia os lembretes pendentes.
 
-Alternativa ao agendador em thread para uso com cron (ex: cron do Railway
+Alternativa ao agendador em thread para uso com cron (ex: Cron Job do Render
 a cada 5 minutos): `python manage.py send_reminders`.
 O registro em NotificationLog garante que nada é enviado em duplicidade
 mesmo com a thread e o cron ativos ao mesmo tempo.
