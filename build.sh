@@ -10,3 +10,8 @@ python manage.py collectstatic --no-input
 
 # Aplica as migrações do banco.
 python manage.py migrate
+
+# Cria/atualiza o superusuário a partir das variáveis de ambiente
+# (DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL). No plano grátis do Render não há
+# shell interativo para rodar createsuperuser manualmente. É idempotente.
+python manage.py ensure_superuser

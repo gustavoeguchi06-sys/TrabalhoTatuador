@@ -33,3 +33,11 @@ services:
       # deploys. Defina o valor no painel do Render (marcada como não sincronizada).
       - key: VAPID_PRIVATE_KEY
         sync: false
+      # Superusuário criado automaticamente no build (plano grátis não tem shell).
+      # Preencha os três valores no painel do Render.
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
