@@ -202,4 +202,3 @@ Por padrão o verificador roda numa thread dentro do processo web (checagem a ca
 
 ---
 
-Arquivo atualizado para apresentar instruções e contexto de forma profissional.
