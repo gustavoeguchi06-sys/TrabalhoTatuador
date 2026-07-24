@@ -4,18 +4,29 @@
 {% block title %}Financeiro — Estúdio{% endblock %}
 
 {% block content %}
-    <section class="stats">
-        <div class="stat">
-            <span class="stat-label">Receita</span>
-            <strong class="stat-value">R$ {{ total_revenue|brl }}</strong>
+    <section class="summary">
+        <div class="summary-hero">
+            <span class="stat-label">Lucro no período</span>
+            <strong class="summary-profit {% if total_profit >= 0 %}positive{% else %}negative{% endif %}">R$ {{ total_profit|brl }}</strong>
+            <div class="summary-margin">
+                <div class="margin-track">
+                    <div class="margin-fill" style="width:{{ margin_bar }}%"></div>
+                </div>
+                <div class="margin-caption">
+                    <span>Margem de lucro</span>
+                    <span><b>{{ margin_pct }}%</b> da receita</span>
+                </div>
+            </div>
         </div>
-        <div class="stat">
-            <span class="stat-label">Despesas</span>
-            <strong class="stat-value negative">R$ {{ total_cost|brl }}</strong>
-        </div>
-        <div class="stat stat-featured">
-            <span class="stat-label">Lucro</span>
-            <strong class="stat-value {% if total_profit >= 0 %}positive{% else %}negative{% endif %}">R$ {{ total_profit|brl }}</strong>
+        <div class="summary-side">
+            <div class="stat">
+                <span class="stat-label">Receita</span>
+                <strong class="stat-value">R$ {{ total_revenue|brl }}</strong>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Despesas</span>
+                <strong class="stat-value negative">R$ {{ total_cost|brl }}</strong>
+            </div>
         </div>
     </section>
 
@@ -112,14 +123,14 @@
                     <tbody>
                     {% for tx in transactions %}
                         <tr>
-                            <td class="cell-date">{{ tx.date|date:"d/m/y" }}</td>
-                            <td class="cell-client">{{ tx.client }}</td>
-                            <td>{{ tx.description }}</td>
-                            <td class="num cell-price">R$ {{ tx.price|brl }}</td>
-                            <td class="num">R$ {{ tx.cost|brl }}</td>
-                            <td><span class="tag">{{ tx.payment }}</span></td>
-                            <td class="cell-notes">{{ tx.notes }}</td>
-                            <td>
+                            <td class="cell-date" data-label="Data">{{ tx.date|date:"d/m/y" }}</td>
+                            <td class="cell-client" data-label="Cliente">{{ tx.client }}</td>
+                            <td data-label="Serviço">{{ tx.description }}</td>
+                            <td class="num cell-price" data-label="Preço">R$ {{ tx.price|brl }}</td>
+                            <td class="num" data-label="Custo">R$ {{ tx.cost|brl }}</td>
+                            <td data-label="Pagamento"><span class="tag">{{ tx.payment }}</span></td>
+                            <td class="cell-notes" data-label="Obs">{{ tx.notes }}</td>
+                            <td class="cell-actions">
                                 <form method="post" action="{% url 'finance:delete' tx.pk %}" onsubmit="return confirm('Excluir este registro?')">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-icon" title="Excluir">&times;</button>

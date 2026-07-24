@@ -42,6 +42,14 @@ def list_create(request):
     totals = qs.aggregate(total_revenue=models.Sum('price'), total_cost=models.Sum('cost'))
     total_revenue = totals['total_revenue'] or Decimal('0')
     total_cost = totals['total_cost'] or Decimal('0')
+    total_profit = total_revenue - total_cost
+
+    # Margem de lucro (% da receita que vira lucro) — usada no resumo.
+    if total_revenue:
+        margin_pct = int(round(total_profit / total_revenue * 100))
+    else:
+        margin_pct = 0
+    margin_bar = max(0, min(100, margin_pct))
 
     today = timezone.localdate()
     todays_appointments = Appointment.objects.filter(date=today, status='agendado')
@@ -66,7 +74,9 @@ def list_create(request):
         'transactions': qs,
         'total_revenue': total_revenue,
         'total_cost': total_cost,
-        'total_profit': total_revenue - total_cost,
+        'total_profit': total_profit,
+        'margin_pct': margin_pct,
+        'margin_bar': margin_bar,
         'filter_client': client_filter,
         'filter_from': f_from,
         'filter_to': f_to,
