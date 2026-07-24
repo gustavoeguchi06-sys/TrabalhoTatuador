@@ -82,15 +82,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # Exige login em todas as views, exceto as marcadas com @login_not_required.
-    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'finance:list'
-LOGOUT_REDIRECT_URL = 'login'
 
 ROOT_URLCONF = 'tattoo_finance.urls'
 

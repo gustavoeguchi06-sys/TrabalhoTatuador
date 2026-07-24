@@ -75,7 +75,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 .venv\Scripts\python.exe manage.py migrate
 ```
 
-5. Crie um usuário para entrar no sistema (o app inteiro exige login):
+5. (Opcional) Crie um superusuário para acessar o Django Admin em `/admin`:
 
 ```powershell
 .venv\Scripts\python.exe manage.py createsuperuser
@@ -87,11 +87,13 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 .venv\Scripts\python.exe manage.py runserver 8000
 ```
 
-7. Abra o navegador em: http://127.0.0.1:8000/ e entre com o usuário criado no passo 5.
+7. Abra o navegador em: http://127.0.0.1:8000/ — o sistema abre direto, sem login.
 
-## Autenticação
+## Acesso
 
-Todas as páginas e endpoints exigem login (`LoginRequiredMiddleware`); apenas `/sw.js` (service worker) e a própria tela de login são públicos. Crie usuários com `createsuperuser` ou pelo admin em `/admin`.
+O app é aberto: todas as páginas do estúdio (financeiro e agenda) são públicas, sem tela de login. Apenas o **Django Admin** em `/admin` continua protegido por autenticação própria — crie um usuário com `createsuperuser` para acessá-lo.
+
+> Atenção: sem login, qualquer pessoa com o link tem acesso total aos dados financeiros e de clientes. Só publique o endereço para quem pode ver essas informações.
 
 ## Variáveis de ambiente
 
@@ -112,12 +114,8 @@ O repositório já vem com um Blueprint (`render.yaml`) que provisiona o serviç
 2. No [dashboard do Render](https://dashboard.render.com/), clique em **New > Blueprint** e selecione o repositório. O Render lê o `render.yaml` e cria o Postgres e o serviço web.
 3. Antes do primeiro deploy, defina a variável **`VAPID_PRIVATE_KEY`** no serviço web (Environment) com o conteúdo do seu `vapid_private_key.pem`. Sem ela, as inscrições de push são perdidas a cada deploy.
    - `DJANGO_SECRET_KEY` é gerada automaticamente pelo Render e `DATABASE_URL` é vinculada ao Postgres — não precisa preencher à mão.
-4. O build roda `bash build.sh` (instala dependências, `collectstatic` e `migrate`); o serviço sobe com `gunicorn tattoo_finance.wsgi:application`.
-5. Após o deploy, crie o usuário de acesso pelo Shell do serviço no Render:
-
-   ```bash
-   python manage.py createsuperuser
-   ```
+4. O build roda `bash build.sh` (instala dependências, `collectstatic`, `migrate` e `ensure_superuser`); o serviço sobe com `gunicorn tattoo_finance.wsgi:application`.
+5. O site abre direto, sem login. Para acessar o **Django Admin** (`/admin`), defina as variáveis `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL` e `DJANGO_SUPERUSER_PASSWORD` no serviço — o build cria/atualiza o superusuário automaticamente (o plano grátis não tem shell interativo).
 
 Observações:
 - O disco do Render é efêmero: os dados ficam no Postgres, não em SQLite. O app falha no boot se `DATABASE_URL` não estiver presente em produção, justamente para evitar perda silenciosa de dados.
@@ -183,7 +181,7 @@ Observações:
 .venv\Scripts\python.exe manage.py test finance
 ```
 
-Cobrem: parsing de valores em formato brasileiro, validação dos formulários, exigência de login, exclusão apenas via POST, totais financeiros e idempotência dos lembretes.
+Cobrem: parsing de valores em formato brasileiro, validação dos formulários, acesso público às páginas, exclusão apenas via POST, totais financeiros e idempotência dos lembretes.
 
 ## Lembretes: thread ou cron
 

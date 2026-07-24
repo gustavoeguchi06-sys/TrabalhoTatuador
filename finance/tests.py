@@ -2,7 +2,6 @@ from datetime import date, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -57,34 +56,23 @@ class AppointmentFormTests(TestCase):
         self.assertIn('duration_minutes', form.errors)
 
 
-class AuthRequiredTests(TestCase):
-    def test_paginas_redirecionam_para_login(self):
+class PublicAccessTests(TestCase):
+    def test_paginas_publicas_sem_login(self):
         for name in ('finance:list', 'finance:agenda'):
             resp = self.client.get(reverse(name))
-            self.assertEqual(resp.status_code, 302)
-            self.assertIn('/accounts/login/', resp.url)
-
-    def test_push_test_exige_login(self):
-        resp = self.client.post(reverse('finance:push_test'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn('/accounts/login/', resp.url)
+            self.assertEqual(resp.status_code, 200)
 
     def test_sw_js_publico(self):
         resp = self.client.get('/sw.js')
         self.assertEqual(resp.status_code, 200)
 
-    def test_login_da_acesso(self):
-        User.objects.create_user('tatuador', password='segredo-forte-123')
-        self.client.login(username='tatuador', password='segredo-forte-123')
-        resp = self.client.get(reverse('finance:list'))
+    @patch('finance.webpush.send_push_to_all', return_value=0)
+    def test_push_test_publico(self, mock_send):
+        resp = self.client.post(reverse('finance:push_test'))
         self.assertEqual(resp.status_code, 200)
 
 
 class ViewTests(TestCase):
-    def setUp(self):
-        User.objects.create_user('tatuador', password='segredo-forte-123')
-        self.client.login(username='tatuador', password='segredo-forte-123')
-
     def test_delete_via_get_nao_permitido(self):
         tx = Transaction.objects.create(client='Ana', date=date(2026, 7, 17), price=100)
         resp = self.client.get(reverse('finance:delete', args=[tx.pk]))

@@ -2,7 +2,6 @@ import json
 from datetime import timedelta
 from decimal import Decimal
 
-from django.contrib.auth.decorators import login_not_required
 from django.db import models
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -141,10 +140,8 @@ def appointment_delete(request, pk):
 
 # ---------- Notificações push ----------
 
-@login_not_required
 def service_worker(request):
-    # O navegador busca o sw.js em segundo plano (inclusive para atualizações),
-    # por isso ele fica fora da exigência de login. Não expõe nenhum dado.
+    # O navegador busca o sw.js em segundo plano (inclusive para atualizações).
     js = """
 self.addEventListener('push', function (event) {
   let data = { title: 'Lembrete', body: '' };
